@@ -35,6 +35,12 @@ vagrant up --provider=libvirt client # or --provider=hyperv
   or even never starts) and PXE boot (e.g. fail to find a boot image).
 * In Windows PE you can press the `SHIFT+F10` key combination to open a
   Command Prompt window.
+* You can target a specific device (e.g. MAC address) by prestaging it.
+  * You can prestage a device through the Active Directory Prestaged
+    devices node on the WDS Manager or with `wdsutil /Set-Device`.
+  * This would also allow you to use a different unattended file and
+    boot image.
+  * **NB** All credentials flow through the network in cleartext.
 * You can open `.wim` files with 7-Zip.
 * You can use the [Microsoft Deployment Toolkit (MDT)](https://en.wikipedia.org/wiki/Microsoft_Deployment_Toolkit)
   to create custom Windows images that you can deploy from the WDS server.
