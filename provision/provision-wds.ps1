@@ -39,6 +39,7 @@ Write-Output 'Configuring WDS...'
 # see https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/wdsutil-set-server
 wdsutil /Set-Server /UseDhcpPorts:No /DhcpOption60:Yes | Out-String -Stream # because DHCP and WDS are running in the same machine.
 wdsutil /Set-Server /AutoAddPolicy /Policy:Disabled /AnswerClients:All | Out-String -Stream
+wdsutil /Set-Server /PxepromptPolicy /Known:OptOut /New:OptOut | Out-String -Stream
 
 # Copy C:\RemoteInstall\boot\x64\wdsmgfw.efi to C:\RemoteInstall\boot\x64 because
 # for some odd reason its not there... but its needed for PXE booting a client.
