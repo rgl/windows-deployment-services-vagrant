@@ -1,5 +1,6 @@
 param(
-    $vmId
+    $vmId,
+    $macAddress
 )
 
 Set-StrictMode -Version Latest
@@ -21,5 +22,8 @@ Get-VMNetworkAdapter -VM $vm | Sort-Object MacAddress | Select-Object -First 1 |
         -RouterGuard On `
         -MacAddressSpoofing Off
     $_ | Set-VMNetworkAdapterVlan -Untagged
+    if ($macAddress) {
+        $_ | Set-VMNetworkAdapter -StaticMacAddress $macAddress
+    }
     $vm | Set-VMFirmware -BootOrder $_
 }

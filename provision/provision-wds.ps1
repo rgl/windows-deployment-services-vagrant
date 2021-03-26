@@ -27,6 +27,8 @@ Write-Output 'Initializing WDS...'
 # see https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/wdsutil-initialize-server
 # NB this will create an object in the AD at, e.g.:
 #       CN=wds.example.com,CN=NetServices,CN=Services,CN=Configuration,DC=example,DC=com
+# NB C:\RemoteInstall will be shared as REMINST and will be available at, e.g.:
+#       \\wds.example.com\REMINST
 wdsutil /Verbose /Progress /Initialize-Server /RemInst:C:\RemoteInstall | Out-String -Stream
 # NB you can ignore the following /Initialize-Server error:
 #       An error occurred while trying to execute the command.

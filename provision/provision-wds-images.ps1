@@ -35,28 +35,3 @@
         Dismount-DiskImage $image.ImagePath | Out-Null
     }
 }
-
-# configure the wds server to use an unattend file to automatically install
-# windows.
-# NB to further automate the installation see the autounattended files at
-#    https://github.com/rgl/windows-vagrant, e.g.
-#    https://github.com/rgl/windows-vagrant/blob/master/windows-2019-uefi/autounattend.xml
-#    the major difference between those and the WDS unattended is the use of
-#    the WindowsDeploymentServices element instead of ImageInstall element.
-# NB the credentials flow in the clear over the network.
-# NB this configures all machines/devices to use the same unattend file. to
-#    target a specific device (e.g. by MAC address) you must prestage the
-#    device.
-#    NB you can prestage a device through the Active Directory Prestaged
-#       devices node on the WDS Manager or with wdsutil /Set-Device.
-#    NB this would also allow you to use a different unattended file and
-#       boot image.
-Write-Output "Configuring WDS to automatically install Windows..."
-Copy-Item unattend-windows-2019-uefi.xml C:\RemoteInstall\WdsClientUnattend
-wdsutil `
-    /Set-Server `
-    /WdsUnattend `
-    /Policy:Enabled `
-    /Architecture:x64uefi `
-    /File:WdsClientUnattend\unattend-windows-2019-uefi.xml `
-    | Out-String -Stream

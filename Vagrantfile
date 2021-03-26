@@ -77,15 +77,23 @@ Vagrant.configure("2") do |config|
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["provision-dhcp-server.ps1", $domain, $domain_ip_address, $wds_ip_address, $dhcp_server_start_range, $dhcp_server_end_range]
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["provision-wds.ps1", $domain]
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-wds-images.ps1"
+    config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-wds-unattend.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-base.ps1"
     config.vm.provision "shell", reboot: true
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-firewall.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: "summary.ps1"
   end
 
-  config.vm.define "client" do |config|
+  define_client(config, 'client', '080027000001')
+  define_client(config, 'newclient', '')
+end
+
+def define_client(config, name, mac_address)
+  config.vm.define name do |config|
     config.vm.box = "wds-empty-windows"
-    config.vm.synced_folder '.', '/vagrant', disabled: true
+    config.vm.boot_timeout = 30*60 # seconds.
+    config.winrm.username = 'Administrator'
+    config.winrm.password = 'HeyH0Password'
 
     config.vm.provider :libvirt do |lv, config|
       config.vm.box = nil
@@ -96,7 +104,7 @@ Vagrant.configure("2") do |config|
       lv.storage :file, :size => '60G', :type => 'qcow2'
       lv.mgmt_attach = false
       lv.boot 'network'
-      config.vm.network :private_network, libvirt__network_name: 'windows-domain-controller-vagrant0'
+      config.vm.network :private_network, mac: mac_address, libvirt__network_name: 'windows-domain-controller-vagrant0'
     end
 
     config.vm.provider :hyperv do |hv, config|
@@ -105,6 +113,10 @@ Vagrant.configure("2") do |config|
       hv.cpus = 2
       hv.memory = 2*1024
       config.vm.network :private_network, bridge: "windows-domain-controller"
+      config.vm.synced_folder '.', '/vagrant',
+        type: 'smb',
+        smb_username: ENV['VAGRANT_SMB_USERNAME'] || ENV['USER'],
+        smb_password: ENV['VAGRANT_SMB_PASSWORD']
       # further configure the VM (e.g. manage the network adapters).
       config.trigger.before :'VagrantPlugins::HyperV::Action::StartInstance', type: :action do |trigger|
         trigger.ruby do |env, machine|
@@ -116,10 +128,13 @@ Vagrant.configure("2") do |config|
             'Bypass',
             '-File',
             'provision/configure-hyperv-host-client.ps1',
-            machine.id
+            machine.id,
+            mac_address
           )
         end
       end
     end
+
+    config.vm.provision "shell", inline: 'Write-Output "Hello World from $env:COMPUTERNAME!"'
   end
 end
