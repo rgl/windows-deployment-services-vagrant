@@ -43,8 +43,9 @@ Can you help with any of the following problems?
 
 ## Notes
 
-* If you launch the `wds` environment multiple times, you must manually remove
-  these objects from the Active Directory:
+* When you launch the `wds` environment multiple times, these Active Directory
+  objects are [automatically removed](provision/add-to-domain.ps1)
+  to make sure WDS starts with the default configuration:
   * `CN=DhcpRoot,CN=NetServices,CN=Services,CN=Configuration,DC=example,DC=com`
   * `CN=wds.example.com,CN=NetServices,CN=Services,CN=Configuration,DC=example,DC=com`
   * `CN=WDS,CN=Computers,DC=example,DC=com`

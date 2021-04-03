@@ -6,6 +6,14 @@ param(
 $ErrorActionPreference = 'Stop'
 
 
+$domainAdminstratorUsername = "vagrant@$domain"
+$domainAdminstratorPassword = 'vagrant'
+$domainAdminstratorCredential = New-Object `
+    System.Management.Automation.PSCredential(
+        $domainAdminstratorUsername,
+        (ConvertTo-SecureString $domainAdminstratorPassword -AsPlainText -Force))
+
+
 $systemVendor = (Get-WmiObject Win32_ComputerSystemProduct Vendor).Vendor
 
 
@@ -40,6 +48,54 @@ $vagrantManagementAdapter | Set-DnsClientServerAddress -ServerAddresses 127.127.
 $domainControllerAdapter | Set-DnsClientServerAddress -ServerAddresses $domainControllerIp
 
 
+# trust the DC CA certificate.
+# NB this is only needed to be able to start the next PSSession before joining
+#    the machine to the domain.
+Import-Certificate `
+    -FilePath c:/vagrant/tmp/ExampleEnterpriseRootCA.der `
+    -CertStoreLocation Cert:\LocalMachine\Root `
+    | Out-Null
+
+# remove previous Active Directory objects. e.g.:
+#   CN=DhcpRoot,CN=NetServices,CN=Services,CN=Configuration,DC=example,DC=com
+#   CN=wds.example.com,CN=NetServices,CN=Services,CN=Configuration,DC=example,DC=com
+#   CN=WDS,CN=Computers,DC=example,DC=com
+#   CN=client,CN=Computers,DC=example,DC=com
+# NB we must use -SkipRevocationCheck because the DC certificate has a CRL
+#    Distribution Point URL of ldap: that does not seem to work. maybe we
+#    should configure the DC CA to include an http: URL too? feel free to
+#    contribute it :-)
+#    NB without this, it errors with:
+#           The SSL certificate could not be checked for revocation
+$session = New-PSSession `
+    -UseSSL `
+    -SessionOption (New-PSSessionOption -SkipRevocationCheck) `
+    -ComputerName "dc.$domain" `
+    -Credential $domainAdminstratorCredential
+Invoke-Command -Session $session -ScriptBlock {
+    $domain = Get-ADDomain
+    $domainDnsRoot = $domain.DNSRoot
+    $domainDn = $domain.DistinguishedName
+    @(
+        'CN=DhcpRoot,CN=NetServices,CN=Services,CN=Configuration'
+        "CN=wds.$domainDnsRoot,CN=NetServices,CN=Services,CN=Configuration"
+        'CN=WDS,CN=Computers'
+        'CN=client,CN=Computers'
+    ) | ForEach-Object {
+        $id = "$_,$domainDn"
+        # NB Get-ADObject does not honour -ErrorAction. 
+        try {
+            $o = Get-ADObject -Identity $id
+            Write-Output "Removing the $id AD object..."
+            $o | Remove-ADObject -Recursive -Confirm:$false
+        } catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException] {
+            # ignore.
+        }
+    }
+}
+Remove-PSSession $session
+
+
 # add the machine to the domain.
 # NB if you get the following error message, its because you MUST first run sysprep.
 #       Add-Computer : Computer 'test-node-one' failed to join domain 'example.com' from its current workgroup 'WORKGROUP'
@@ -47,9 +103,7 @@ $domainControllerAdapter | Set-DnsClientServerAddress -ServerAddresses $domainCo
 #       was identical to the SID of this machine. This is a symptom of an improperly cloned operating system install.  You
 #       should run sysprep on this machine in order to generate a new machine SID. Please see
 #       http://go.microsoft.com/fwlink/?LinkId=168895 for more information.
+Write-Output "Adding this machine to the $domain domain..."
 Add-Computer `
     -DomainName $domain `
-    -Credential (New-Object `
-                    System.Management.Automation.PSCredential(
-                        "vagrant@$domain",
-                        (ConvertTo-SecureString "vagrant" -AsPlainText -Force)))
+    -Credential $domainAdminstratorCredential
