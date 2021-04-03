@@ -1,5 +1,8 @@
 # to be able to configure hyper-v vm.
 ENV['VAGRANT_EXPERIMENTAL'] = 'typed_triggers'
+# to make sure the nodes are created in order, we
+# have to force a --no-parallel execution.
+ENV['VAGRANT_NO_PARALLEL'] = 'yes'
 
 $domain                  = "example.com"
 $domain_ip_address       = "192.168.56.2"
@@ -74,18 +77,35 @@ Vagrant.configure("2") do |config|
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["add-to-domain.ps1", $domain, $domain_ip_address]
     config.vm.provision "shell", reboot: true
     config.vm.provision "shell", inline: "$env:chocolateyVersion='0.10.15'; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex", name: "Install Chocolatey"
+    config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-base.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["provision-dhcp-server.ps1", $domain, $domain_ip_address, $wds_ip_address, $dhcp_server_start_range, $dhcp_server_end_range]
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["provision-wds.ps1", $domain]
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-wds-images.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-wds-unattend.ps1"
-    config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-base.ps1"
     config.vm.provision "shell", reboot: true
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-firewall.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: "summary.ps1"
+
+    config.trigger.before :up do |trigger|
+      trigger.run = {
+        inline: '''bash -euc \'
+certs=(
+  ../windows-domain-controller-vagrant/tmp/ExampleEnterpriseRootCA.der
+)
+for cert_path in "${certs[@]}"; do
+  if [ -f $cert_path ]; then
+    mkdir -p tmp
+    cp $cert_path tmp
+  fi
+done
+\'
+'''
+      }
+    end
   end
 
   define_client(config, 'client', '080027000001')
-  define_client(config, 'newclient', '')
+  define_client(config, 'newclient', nil)
 end
 
 def define_client(config, name, mac_address)
@@ -101,8 +121,18 @@ def define_client(config, name, mac_address)
       lv.cpus = 2
       lv.cpu_mode = 'host-passthrough'
       lv.keymap = 'pt'
+      lv.input :type => 'tablet', :bus => 'usb'
+      lv.graphics_type = 'spice'
+      lv.video_type = 'qxl'
+      lv.channel :type => 'unix', :target_name => 'org.qemu.guest_agent.0', :target_type => 'virtio'
+      lv.channel :type => 'spicevmc', :target_name => 'com.redhat.spice.0', :target_type => 'virtio'
       lv.storage :file, :size => '60G', :type => 'qcow2'
+      # NB currently its not possible to connect to the libvirt VMs because
+      #    there is no way for libvirt-vagrant to obtain the VM IP address (it
+      #    does not use a dnsmasq provided IP address; instead, the IP is
+      #    assigned by the DHCP server in the WDS VM).
       lv.mgmt_attach = false
+      lv.boot 'hd' # NB since this is using a BIOS firmware, the OS cannot change the boot order.
       lv.boot 'network'
       config.vm.network :private_network, mac: mac_address, libvirt__network_name: 'windows-domain-controller-vagrant0'
     end

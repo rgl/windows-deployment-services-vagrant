@@ -1,6 +1,8 @@
 # copy unattend files.
 Copy-Item unattend-* C:\RemoteInstall\WdsClientUnattend
 
+$firmwareType = (Get-ComputerInfo -Property BiosFirmwareType).BiosFirmwareType.ToString().ToLowerInvariant()
+
 # configure the wds server to use an unattend file to automatically boot
 # new devices into the wds server.
 # NB to further automate the installation see the autounattended files at
@@ -26,6 +28,14 @@ wdsutil `
     /NewMachineDomainJoin:No `
     /WdsUnattend `
     /Policy:Enabled `
+    /Architecture:x64 `
+    /File:WdsClientUnattend\unattend-windows-2019-amd64-bios-new-device.xml `
+    | Out-String -Stream
+wdsutil `
+    /Set-Server `
+    /NewMachineDomainJoin:No `
+    /WdsUnattend `
+    /Policy:Enabled `
     /Architecture:x64uefi `
     /File:WdsClientUnattend\unattend-windows-2019-amd64-uefi-new-device.xml `
     | Out-String -Stream
@@ -41,5 +51,5 @@ wdsutil `
     /Device:client `
     /ID:080027000001 `
     /JoinDomain:No `
-    /WdsClientUnattend:WdsClientUnattend\unattend-windows-2019-amd64-uefi-known-device.xml `
+    /WdsClientUnattend:WdsClientUnattend\unattend-windows-2019-amd64-$firmwareType-known-device.xml `
     | Out-String -Stream

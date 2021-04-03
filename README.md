@@ -6,7 +6,10 @@ This is an example [Windows Deployment Services (WDS)](https://en.wikipedia.org/
 
 Install and start the [Windows Domain Controller environment](https://github.com/rgl/windows-domain-controller-vagrant) in `../windows-domain-controller-vagrant`.
 
-Copy the Windows 2019 ISO to the `tmp` directory (the exact ISO flename is
+Copy the Windows 2019 ISO to the `tmp` directory (the exact ISO filename is
+defined in [provision/provision-wds-images.ps1](provision/provision-wds-images.ps1)).
+
+Copy the VirtIO drivers ISO to the `tmp` directory (the exact ISO filename is
 defined in [provision/provision-wds-images.ps1](provision/provision-wds-images.ps1)).
 
 Launch the `wds` environment:
