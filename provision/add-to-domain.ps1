@@ -17,12 +17,8 @@ $domainAdminstratorCredential = New-Object `
 $systemVendor = (Get-WmiObject Win32_ComputerSystemProduct Vendor).Vendor
 
 
-$adapters = @(Get-NetAdapter -Physical)
-if ($systemVendor -eq 'Microsoft Corporation') {
-    $adapters = $adapters | Sort-Object MacAddress
-}
-$vagrantManagementAdapter = $adapters[0]
-$domainControllerAdapter = $adapters[1]
+$vagrantManagementAdapter = Get-NetAdapter -Name vagrant
+$domainControllerAdapter = Get-NetAdapter -Name domain
 
 
 # do not dynamically register the vagrant management interface address in the domain dns server.

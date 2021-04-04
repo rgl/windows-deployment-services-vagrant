@@ -73,6 +73,7 @@ Vagrant.configure("2") do |config|
 
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["configure-hyperv-guest.ps1", $wds_ip_address]
     config.vm.provision "windows-sysprep"
+    config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-network-interface-names.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: "locale.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["add-to-domain.ps1", $domain, $domain_ip_address]
     config.vm.provision "shell", reboot: true
