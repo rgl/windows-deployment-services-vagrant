@@ -67,7 +67,7 @@ Vagrant.configure("2") do |config|
 
     config.vm.network "private_network",
       ip: $wds_ip_address,
-      libvirt__forward_mode: "route",
+      libvirt__forward_mode: "none",
       libvirt__dhcp_enabled: false,
       hyperv__bridge: "windows-domain-controller"
 
@@ -79,6 +79,7 @@ Vagrant.configure("2") do |config|
     config.vm.provision "shell", reboot: true
     config.vm.provision "shell", inline: "$env:chocolateyVersion='0.10.15'; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex", name: "Install Chocolatey"
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-base.ps1"
+    config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-router.ps1"
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["provision-dhcp-server.ps1", $domain, $domain_ip_address, $wds_ip_address, $dhcp_server_start_range, $dhcp_server_end_range]
     config.vm.provision "shell", path: "provision/ps.ps1", args: ["provision-wds.ps1", $domain]
     config.vm.provision "shell", path: "provision/ps.ps1", args: "provision-wds-images.ps1"
